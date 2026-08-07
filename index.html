@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WikiTranslate Lite - Geography</title>
+  <style>
+    :root{
+      --bg:#f6f7f9; --card:#fff; --text:#202124; --muted:#68707a;
+      --line:#dfe3e8; --accent:#2f6feb; --good:#16823b; --warn:#b26a00;
+      --bad:#b42318; --chip:#eef2f7; --geo:#edf7ef;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;background:var(--bg);color:var(--text)}
+    .wrap{max-width:1040px;margin:auto;padding:24px 16px 60px}
+    header{margin-bottom:18px}
+    h1{margin:0 0 6px;font-size:30px}
+    .sub{color:var(--muted);line-height:1.65}
+    .panel,.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+    .panel{padding:18px;margin:18px 0}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    @media(max-width:720px){.grid{grid-template-columns:1fr}}
+    label.title{display:block;font-weight:700;margin-bottom:8px}
+    .langs,.checks{display:flex;gap:8px;flex-wrap:wrap}
+    .lang,.check{display:inline-flex;align-items:center;gap:6px;background:var(--chip);padding:8px 10px;border-radius:999px;font-size:14px}
+    input[type="text"],input[type="number"],select{width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:15px}
+    button{appearance:none;border:0;border-radius:10px;padding:11px 16px;font-size:15px;font-weight:700;cursor:pointer}
+    #searchBtn{background:var(--accent);color:#fff;min-width:170px}
+    #searchBtn:disabled{opacity:.55;cursor:wait}
+    .actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}
+    #status{font-size:14px;color:var(--muted)}
+    .hint{font-size:13px;color:var(--muted);line-height:1.55;margin-top:8px}
+    .results{display:grid;gap:12px;margin-top:16px}
+    .card{padding:16px}
+    .top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+    .name{font-size:19px;font-weight:800;line-height:1.35}
+    .langname{font-size:13px;color:var(--muted);margin-top:4px}
+    .score{min-width:72px;text-align:center;border-radius:10px;padding:8px 9px;font-weight:800;background:#e9f7ee;color:var(--good)}
+    .score.mid{background:#fff4df;color:var(--warn)}
+    .score.low{background:#fdeceb;color:var(--bad)}
+    .metrics{display:flex;gap:7px;flex-wrap:wrap;margin:13px 0}
+    .pill{font-size:13px;background:var(--chip);border-radius:999px;padding:6px 9px}
+    .pill.geo{background:var(--geo);color:#27613a}
+    .reason{font-size:14px;color:var(--muted);line-height:1.55}
+    .links{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+    .links a{text-decoration:none;color:var(--accent);font-weight:700;font-size:14px;padding:8px 10px;border:1px solid #b9cdf8;border-radius:9px;background:#f7faff}
+    .empty{padding:26px;text-align:center;color:var(--muted)}
+    .legend{font-size:13px;color:var(--muted);margin-top:10px;line-height:1.6}
+    .geoPanel{border-left:4px solid #64a66f;background:#fbfefb}
+    .hidden{display:none!important}
+    .sectionTitle{font-weight:800;margin-bottom:12px}
+    .modeRow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+    .modeBtn{background:#eef2f7;color:#263238;border:1px solid var(--line)}
+    .modeBtn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .countryResolved{font-size:13px;color:var(--good);margin-top:7px}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>WikiTranslate Lite</h1>
+    <div class="sub">
+      日本語版がなく、比較的編集しやすそうなWikipedia記事を探す試作版。
+      通常のランダム探索に加えて、Wikidataから村・集落・町・川・山・島・湖を直接探す「地理モード」を追加しています。
+    </div>
+  </header>
+
+  <section class="panel">
+    <div class="sectionTitle">探索モード</div>
+    <div class="modeRow">
+      <button type="button" class="modeBtn" data-mode="random">全ジャンル・ランダム</button>
+      <button type="button" class="modeBtn active" data-mode="geo">地理・集落を探す</button>
+    </div>
+
+    <div class="grid">
+      <div>
+        <label class="title">探す言語</label>
+        <div class="langs">
+          <label class="lang"><input type="checkbox" name="lang" value="en" checked> 🇬🇧 English</label>
+          <label class="lang"><input type="checkbox" name="lang" value="fr" checked> 🇫🇷 Français</label>
+          <label class="lang"><input type="checkbox" name="lang" value="es" checked> 🇪🇸 Español</label>
+          <label class="lang"><input type="checkbox" name="lang" value="pt" checked> 🇵🇹 Português</label>
+          <label class="lang"><input type="checkbox" name="lang" value="de"> 🇩🇪 Deutsch</label>
+          <label class="lang"><input type="checkbox" name="lang" value="it"> 🇮🇹 Italiano</label>
+          <label class="lang"><input type="checkbox" name="lang" value="ru"> 🇷🇺 Русский</label>
+          <label class="lang"><input type="checkbox" name="lang" value="ar"> 🇸🇦 العربية</label>
+          <label class="lang"><input type="checkbox" name="lang" value="id"> 🇮🇩 Indonesia</label>
+          <label class="lang"><input type="checkbox" name="lang" value="vi"> 🇻🇳 Tiếng Việt</label>
+          <label class="lang"><input type="checkbox" name="lang" value="ceb"> Cebuano</label>
+          <label class="lang"><input type="checkbox" name="lang" value="sw"> Kiswahili</label>
+        </div>
+      </div>
+
+      <div>
+        <label class="title" for="maxLen">最大記事サイズ（bytes）</label>
+        <input id="maxLen" type="number" min="500" step="500" value="10000">
+        <div class="hint">短いスタブを優先するための上限。Wikipedia API上のページサイズです。</div>
+      </div>
+
+      <div>
+        <label class="title" for="refFilter">参考文献</label>
+        <select id="refFilter">
+          <option value="exact1" selected>1件ちょうど</option>
+          <option value="lte1">1件以下</option>
+          <option value="0">0件のみ</option>
+          <option value="lte2">2件以下</option>
+          <option value="lte3">3件以下</option>
+          <option value="any">指定なし</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="title" for="sample">詳しく判定する候補数</label>
+        <select id="sample">
+          <option value="5">5件</option>
+          <option value="10" selected>10件</option>
+          <option value="15">15件</option>
+          <option value="25">25件</option>
+        </select>
+        <div class="hint">Wikidataなどで候補を拾ったあと、実際の記事HTMLを読んで出典・画像・Infoboxを判定します。</div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px">
+      <label class="title">追加の「楽」条件</label>
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="noImage" checked> 画像なし必須</label>
+        <label class="check"><input type="checkbox" id="noInfobox"> Infoboxなし必須</label>
+        <label class="check"><input type="checkbox" id="noTable"> 表なし必須</label>
+      </div>
+      <div class="hint">地理記事はInfobox付きが多いので、初期状態ではInfoboxを許可しています。完全に元のLite条件にしたければONにできます。</div>
+    </div>
+  </section>
+
+  <section id="geoPanel" class="panel geoPanel">
+    <div class="sectionTitle">地理フィルター</div>
+    <div class="grid">
+      <div>
+        <label class="title" for="geoType">地理ジャンル</label>
+        <select id="geoType">
+          <option value="smallsettlement" selected>村・小集落・人間の居住地</option>
+          <option value="village">村・小集落だけ</option>
+          <option value="town">町</option>
+          <option value="river">川</option>
+          <option value="mountain">山</option>
+          <option value="island">島</option>
+          <option value="lake">湖</option>
+        </select>
+        <div class="hint">「村・小集落」は village / hamlet / human settlement のWikidata項目から拾います。</div>
+      </div>
+
+      <div>
+        <label class="title" for="country">国名で絞る（任意）</label>
+        <input id="country" type="text" list="countryExamples" placeholder="例：ネパール / Ghana / Laos / Bolivia">
+        <datalist id="countryExamples">
+          <option value="ネパール"><option value="バングラデシュ"><option value="ラオス"><option value="カンボジア">
+          <option value="ガーナ"><option value="ケニア"><option value="タンザニア"><option value="ウガンダ">
+          <option value="ザンビア"><option value="ボリビア"><option value="グアテマラ"><option value="パプアニューギニア">
+        </datalist>
+        <div id="countryResolved" class="countryResolved"></div>
+        <div class="hint">空欄なら世界中。国名はWikidataで検索するので、日本語でも英語でも指定できます。</div>
+      </div>
+
+      <div>
+        <label class="title" for="poolSize">Wikidata候補プール</label>
+        <select id="poolSize">
+          <option value="60">60件</option>
+          <option value="120" selected>120件</option>
+          <option value="200">200件</option>
+          <option value="300">300件</option>
+        </select>
+        <div class="hint">まずこの件数まで候補を取り、その中から選択言語の記事を見つけて精査します。</div>
+      </div>
+
+      <div>
+        <label class="title" for="geoPriority">候補の優先</label>
+        <select id="geoPriority">
+          <option value="small" selected>短い記事を優先</option>
+          <option value="shuffle">シャッフル</option>
+        </select>
+        <div class="hint">大量の村記事がある国では「短い記事を優先」が使いやすいです。</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="actions">
+      <button id="searchBtn">候補を探す</button>
+      <span id="status">待機中</span>
+    </div>
+    <div class="legend">
+      必須条件は「日本語版がないこと」。地理モードではWikidata Query Serviceから地物候補を取得します。
+      参考文献1件だけの超短い地理スタブは見つけやすい一方、日本語版で新規記事にするときは出典の質・特筆性を別途確認してください。
+    </div>
+  </section>
+
+  <div id="results" class="results">
+    <div class="panel empty">条件を決めて「候補を探す」を押すと、ここに記事が出ます。</div>
+  </div>
+</div>
+
+<script>
+const LANGS = {
+  en:{name:"English",flag:"🇬🇧"}, fr:{name:"Français",flag:"🇫🇷"}, es:{name:"Español",flag:"🇪🇸"},
+  pt:{name:"Português",flag:"🇵🇹"}, de:{name:"Deutsch",flag:"🇩🇪"}, it:{name:"Italiano",flag:"🇮🇹"},
+  ru:{name:"Русский",flag:"🇷🇺"}, ar:{name:"العربية",flag:"🇸🇦"}, id:{name:"Indonesia",flag:"🇮🇩"},
+  vi:{name:"Tiếng Việt",flag:"🇻🇳"}, ceb:{name:"Cebuano",flag:""}, sw:{name:"Kiswahili",flag:""}
+};
+
+const GEO_TYPES = {
+  smallsettlement:{label:"村・小集落", qids:["Q532","Q5084","Q486972"]},
+  village:{label:"村・小集落", qids:["Q532","Q5084"]},
+  town:{label:"町", qids:["Q3957"]},
+  river:{label:"川", qids:["Q4022"]},
+  mountain:{label:"山", qids:["Q8502"]},
+  island:{label:"島", qids:["Q23442"]},
+  lake:{label:"湖", qids:["Q23397"]}
+};
+
+const $ = s => document.querySelector(s);
+const results = $("#results");
+const statusEl = $("#status");
+const btn = $("#searchBtn");
+let currentMode = "geo";
+
+function api(lang, params){
+  const q = new URLSearchParams({origin:"*",format:"json",formatversion:"2",...params});
+  return `https://${lang}.wikipedia.org/w/api.php?${q}`;
+}
+
+function setMode(mode){
+  currentMode = mode;
+  document.querySelectorAll(".modeBtn").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));
+  $("#geoPanel").classList.toggle("hidden",mode!=="geo");
+}
+
+document.querySelectorAll(".modeBtn").forEach(b=>b.addEventListener("click",()=>setMode(b.dataset.mode)));
+
+async function getRandomPages(lang, limit){
+  const url = api(lang,{
+    action:"query",generator:"random",grnnamespace:"0",grnlimit:String(limit),
+    prop:"info|pageprops|langlinks",lllang:"ja",lllimit:"1"
+  });
+  const r = await fetch(url);
+  if(!r.ok) throw new Error(`${lang}: random API ${r.status}`);
+  const j = await r.json();
+  return (j.query?.pages || []).filter(p=>!p.pageprops?.disambiguation && !(p.langlinks||[]).some(x=>x.lang==="ja"));
+}
+
+async function resolveCountry(text){
+  if(!text.trim()) return null;
+  for(const language of ["ja","en"]){
+    const q = new URLSearchParams({
+      action:"wbsearchentities",search:text.trim(),language,uselang:language,
+      type:"item",limit:"8",format:"json",origin:"*"
+    });
+    const r = await fetch(`https://www.wikidata.org/w/api.php?${q}`);
+    if(!r.ok) continue;
+    const j = await r.json();
+    const hit = (j.search || [])[0];
+    if(hit) return {id:hit.id,label:hit.label || text,description:hit.description || ""};
+  }
+  throw new Error("国名をWikidataで見つけられませんでした");
+}
+
+function wikiValues(langs){
+  return langs.map(l=>`<https://${l}.wikipedia.org/>`).join(" ");
+}
+
+async function getGeoCandidates(langs, geoType, country, limit){
+  const cfg = GEO_TYPES[geoType];
+  const typeValues = cfg.qids.map(q=>`wd:${q}`).join(" ");
+  const countryClause = country ? `?item wdt:P17 wd:${country.id} .` : "";
+  const query = `
+SELECT DISTINCT ?item ?article WHERE {
+  VALUES ?rootType { ${typeValues} }
+  VALUES ?wiki { ${wikiValues(langs)} }
+  ?item wdt:P31 ?rootType .
+  ${countryClause}
+  ?article schema:about ?item ; schema:isPartOf ?wiki .
+  FILTER NOT EXISTS {
+    ?jaArticle schema:about ?item ; schema:isPartOf <https://ja.wikipedia.org/> .
+  }
+}
+LIMIT ${Math.max(20,Math.min(500,limit))}`;
+
+  const q = new URLSearchParams({query,format:"json",origin:"*"});
+  const r = await fetch(`https://query.wikidata.org/sparql?${q}`,{
+    headers:{Accept:"application/sparql-results+json"}
+  });
+  if(!r.ok) throw new Error(`Wikidata Query Service: ${r.status}`);
+  const j = await r.json();
+  const seen = new Set();
+  const out = [];
+  for(const row of (j.results?.bindings || [])){
+    const item = row.item?.value || "";
+    const article = row.article?.value || "";
+    if(!item || !article || seen.has(item)) continue;
+    try{
+      const u = new URL(article);
+      const lang = u.hostname.split(".")[0];
+      if(!langs.includes(lang)) continue;
+      const raw = u.pathname.replace(/^\/wiki\//,"");
+      const title = decodeURIComponent(raw).replace(/_/g," ");
+      seen.add(item);
+      out.push({qid:item.split("/").pop(),lang,title,articleUrl:article,geoLabel:cfg.label});
+    }catch(e){}
+  }
+  return out;
+}
+
+async function getPageInfo(lang,title){
+  const url = api(lang,{action:"query",titles:title,prop:"info|pageprops|langlinks",lllang:"ja",lllimit:"1"});
+  const r = await fetch(url);
+  if(!r.ok) throw new Error(`${lang}: info API ${r.status}`);
+  const j = await r.json();
+  const p = j.query?.pages?.[0];
+  if(!p || p.missing) throw new Error("page missing");
+  if(p.pageprops?.disambiguation) throw new Error("disambiguation");
+  if((p.langlinks||[]).some(x=>x.lang==="ja")) throw new Error("Japanese article exists");
+  return p;
+}
+
+async function inspectPage(lang, title){
+  const url = api(lang,{action:"parse",page:title,prop:"text|wikitext",disablelimitreport:"1",disableeditsection:"1"});
+  const r = await fetch(url);
+  if(!r.ok) throw new Error(`${lang}: parse API ${r.status}`);
+  const j = await r.json();
+  if(j.error) throw new Error(j.error.info || "parse error");
+
+  const html = j.parse?.text || "";
+  const wt = j.parse?.wikitext || "";
+  const doc = new DOMParser().parseFromString(html,"text/html");
+
+  let refCount = doc.querySelectorAll("ol.references > li, .references > li").length;
+  if(refCount === 0) refCount = (wt.match(/<ref\b/gi) || []).length;
+
+  const hasInfobox = !!doc.querySelector('table.infobox, table[class*="infobox"], .infobox, .infobox_v2, .infobox_v3, .infobox_v4');
+
+  let hasImage = false;
+  const imgs = [...doc.querySelectorAll("figure img, .thumb img, img.mw-file-element")];
+  for(const img of imgs){
+    const w = Number(img.getAttribute("width") || 0);
+    const h = Number(img.getAttribute("height") || 0);
+    const parent = img.closest(".navbox,.metadata,.ambox,.hatnote,.infobox");
+    if(!parent && (w >= 120 || h >= 100 || (!w && !h))){hasImage=true;break;}
+  }
+
+  const hasTable = !!doc.querySelector("table.wikitable");
+  const hasMath = !!doc.querySelector(".mwe-math-element, math");
+  const textLength = (doc.querySelector(".mw-parser-output")?.innerText || "").trim().length;
+  return {refCount,hasInfobox,hasImage,hasTable,hasMath,textLength};
+}
+
+function passesRefFilter(n,mode){
+  if(mode==="exact1") return n===1;
+  if(mode==="lte1") return n<=1;
+  if(mode==="0") return n===0;
+  if(mode==="lte2") return n<=2;
+  if(mode==="lte3") return n<=3;
+  return true;
+}
+
+function score(item){
+  let s=100;
+  if(item.length>4000) s-=5;
+  if(item.length>7000) s-=10;
+  if(item.length>10000) s-=15;
+  if(item.refCount===1) s-=2;
+  else if(item.refCount===2) s-=8;
+  else if(item.refCount>=3) s-=Math.min(25,item.refCount*4);
+  if(item.hasInfobox) s-=12;
+  if(item.hasImage) s-=14;
+  if(item.hasTable) s-=10;
+  if(item.hasMath) s-=15;
+  if(item.geoLabel && item.length<=5000) s+=4;
+  return Math.max(0,Math.min(100,s));
+}
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+}
+
+function shuffle(a){
+  const x=[...a];
+  for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];}
+  return x;
+}
+
+function render(items,countryLabel=""){
+  if(!items.length){
+    results.innerHTML=`<div class="panel empty">条件に合う記事が見つかりませんでした。<br>地理モードなら「Infoboxなし必須」をOFFのままにする、画像条件を外す、参考文献を「1件以下 / 2件以下」に広げるとヒットしやすくなります。</div>`;
+    return;
+  }
+
+  results.innerHTML=items.map(x=>{
+    const cls=x.score>=85?"":x.score>=70?"mid":"low";
+    const info=LANGS[x.lang]||{name:x.lang,flag:""};
+    const reasons=[];
+    if(x.refCount===1) reasons.push("参考文献1件ぴったり");
+    else reasons.push(`参考文献${x.refCount}件`);
+    if(!x.hasImage) reasons.push("画像なし");
+    if(!x.hasInfobox) reasons.push("Infoboxなし");
+    if(!x.hasTable) reasons.push("表なし");
+    if(!x.hasMath) reasons.push("数式なし");
+
+    const pageUrl=x.articleUrl || `https://${x.lang}.wikipedia.org/wiki/${encodeURIComponent(x.title.replace(/ /g,"_"))}`;
+    const translateUrl=`https://ja.wikipedia.org/wiki/Special:ContentTranslation?from=${encodeURIComponent(x.lang)}&to=ja&page=${encodeURIComponent(x.title)}`;
+    const wdUrl=x.qid?`https://www.wikidata.org/wiki/${x.qid}`:"";
+
+    return `<article class="card">
+      <div class="top">
+        <div>
+          <div class="name">${esc(x.title)}</div>
+          <div class="langname">${info.flag} ${esc(info.name)} ・ 日本語版なし${countryLabel?` ・ ${esc(countryLabel)}`:""}</div>
+        </div>
+        <div class="score ${cls}">${x.score}<br><small>/ 100</small></div>
+      </div>
+      <div class="metrics">
+        ${x.geoLabel?`<span class="pill geo">地理：${esc(x.geoLabel)}</span>`:""}
+        <span class="pill">サイズ ${Number(x.length||0).toLocaleString()} bytes</span>
+        <span class="pill">本文 約${Number(x.textLength||0).toLocaleString()}字</span>
+        <span class="pill">参考文献 ${x.refCount}</span>
+        <span class="pill">${x.hasImage?"画像あり":"画像なし"}</span>
+        <span class="pill">${x.hasInfobox?"Infoboxあり":"Infoboxなし"}</span>
+      </div>
+      <div class="reason">楽判定：${reasons.join("・")}</div>
+      <div class="links">
+        <a href="${pageUrl}" target="_blank" rel="noopener">原文を見る</a>
+        <a href="${translateUrl}" target="_blank" rel="noopener">翻訳を開始</a>
+        ${wdUrl?`<a href="${wdUrl}" target="_blank" rel="noopener">Wikidata</a>`:""}
+      </div>
+    </article>`;
+  }).join("");
+}
+
+btn.addEventListener("click",async()=>{
+  const langs=[...document.querySelectorAll('input[name="lang"]:checked')].map(x=>x.value);
+  if(!langs.length){alert("言語を1つ以上選んでください。");return;}
+
+  const sample=Number($("#sample").value);
+  const maxLen=Number($("#maxLen").value);
+  const refFilter=$("#refFilter").value;
+  const requireNoImage=$("#noImage").checked;
+  const requireNoInfobox=$("#noInfobox").checked;
+  const requireNoTable=$("#noTable").checked;
+
+  btn.disabled=true;
+  results.innerHTML="";
+  $("#countryResolved").textContent="";
+  let all=[];
+  let checked=0;
+  let failed=0;
+  let country=null;
+
+  try{
+    if(currentMode==="geo"){
+      const countryText=$("#country").value.trim();
+      if(countryText){
+        statusEl.textContent=`国名「${countryText}」をWikidataで確認中…`;
+        country=await resolveCountry(countryText);
+        $("#countryResolved").textContent=`→ ${country.label} (${country.id}) ${country.description?"・"+country.description:""}`;
+      }
+
+      const geoType=$("#geoType").value;
+      const poolSize=Number($("#poolSize").value);
+      statusEl.textContent=`Wikidataから${GEO_TYPES[geoType].label}を検索中…`;
+      let candidates=await getGeoCandidates(langs,geoType,country,poolSize);
+      if(!candidates.length) throw new Error("Wikidataで候補が見つかりませんでした");
+
+      if($("#geoPriority").value==="shuffle") candidates=shuffle(candidates);
+      const infoRows=[];
+      for(const c of candidates){
+        if(infoRows.length>=Math.max(sample*3,20)) break;
+        try{
+          const p=await getPageInfo(c.lang,c.title);
+          infoRows.push({...c,length:p.length||0});
+        }catch(e){failed++;}
+      }
+      infoRows.sort((a,b)=>a.length-b.length);
+
+      for(const c of infoRows){
+        if(checked>=sample) break;
+        if(c.length>maxLen) continue;
+        checked++;
+        statusEl.textContent=`${c.title} を精査中… (${checked}/${sample})`;
+        try{
+          const meta=await inspectPage(c.lang,c.title);
+          const item={...c,...meta};
+          item.score=score(item);
+          if(!passesRefFilter(item.refCount,refFilter)) continue;
+          if(requireNoImage && item.hasImage) continue;
+          if(requireNoInfobox && item.hasInfobox) continue;
+          if(requireNoTable && item.hasTable) continue;
+          all.push(item);
+        }catch(e){failed++;}
+      }
+    }else{
+      for(let li=0;li<langs.length;li++){
+        const lang=langs[li];
+        statusEl.textContent=`${LANGS[lang]?.name||lang} からランダム候補を取得中…`;
+        let pages=[];
+        try{pages=await getRandomPages(lang,sample);}catch(e){failed++;continue;}
+        for(const p of pages){
+          checked++;
+          if((p.length||0)>maxLen) continue;
+          statusEl.textContent=`${p.title} を精査中…`;
+          try{
+            const meta=await inspectPage(lang,p.title);
+            const item={lang,title:p.title,length:p.length||0,...meta};
+            item.score=score(item);
+            if(!passesRefFilter(item.refCount,refFilter)) continue;
+            if(requireNoImage && item.hasImage) continue;
+            if(requireNoInfobox && item.hasInfobox) continue;
+            if(requireNoTable && item.hasTable) continue;
+            all.push(item);
+          }catch(e){failed++;}
+        }
+      }
+    }
+
+    all.sort((a,b)=>b.score-a.score || a.length-b.length);
+    render(all,country?.label||"");
+    statusEl.textContent=`${checked}記事を精査 → ${all.length}件ヒット${failed?`（${failed}件スキップ）`:""}`;
+  }catch(e){
+    console.error(e);
+    results.innerHTML=`<div class="panel empty">取得中にエラーが発生しました。<br>${esc(e.message||String(e))}</div>`;
+    statusEl.textContent="エラー";
+  }finally{
+    btn.disabled=false;
+  }
+});
+</script>
+</body>
+</html>
